@@ -8,6 +8,8 @@ Created on Tue May 12 11:53:22 2026
 # This part is coded by nasser / My partner
 
 
+
+# I have finished the gui - Nasser
 import re
 import tkinter as tk
 
