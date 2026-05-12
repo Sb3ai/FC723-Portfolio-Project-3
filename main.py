@@ -8,7 +8,6 @@ Created on Tue May 12 11:51:45 2026
 
 from backend.basic_logic import add
 from backend.scientific_math import sine
-import gui
 
 def test_backend():
     print("Backend test started...\n")
@@ -21,3 +20,5 @@ def test_backend():
 
 if __name__ == "__main__":
     test_backend()
+    # Import GUI after testing so the window opens once
+    import gui
