@@ -12,6 +12,8 @@ Created on Tue May 12 11:53:22 2026
 # I have finished the gui - Nasser
 import re
 import tkinter as tk
+import math 
+import ast
 
 # Import basic operations from the backend logic file.
 from backend.basic_logic import (
@@ -176,7 +178,83 @@ class CalculatorGUI:
             relief="flat",
         )
         self.display.pack(fill="x")
+    
+    def add_function_to_display(self,function_name):
+        current = self.display_text.get()
+        
+        if current == "0" or current == "Error":
+            self.display_text.set(function_name + "(")
+        else:
+            self.display_text.set(current + function_name + "(")
+    
+    def evaluate_expression(self, expression):
+        expression = expression.replace("×", "*")
+        expression = expression.replace("÷", "/")
+        expression = expression.replace("xʸ", "**")
+        expression = expression.replace("π", str(math.pi))
+        
+        tree = ast.parse(expression, mode="eval")
+        return self.evaluate_expression(tree.body)
+        
+    def evaluate_expression(self, expression):
+        """Safely evaluate a calculator expression without using Python eval."""
+        expression = expression.replace("×", "*")
+        expression = expression.replace("÷", "/")
+        expression = expression.replace("xʸ", "**")
+        expression = expression.replace("π", str(math.pi))
+    
+        tree = ast.parse(expression, mode="eval")
+        return self.evaluate_node(tree.body)
+    
 
+    def evaluate_node(self, node):
+        """Evaluate only the math syntax allowed in this calculator."""
+        if isinstance(node, ast.Constant):
+            return float(node.value)
+    
+        if isinstance(node, ast.BinOp):
+            left = self.evaluate_node(node.left)
+            right = self.evaluate_node(node.right)
+    
+            if isinstance(node.op, ast.Add):
+                return add(left, right)
+            if isinstance(node.op, ast.Sub):
+                return subtract(left, right)
+            if isinstance(node.op, ast.Mult):
+                return multiply(left, right)
+            if isinstance(node.op, ast.Div):
+                return divide(left, right)
+            if isinstance(node.op, ast.Pow):
+                return power(left, right)
+    
+        if isinstance(node, ast.UnaryOp):
+            value = self.evaluate_node(node.operand)
+    
+            if isinstance(node.op, ast.UAdd):
+                return value
+            if isinstance(node.op, ast.USub):
+                return -value
+    
+        if isinstance(node, ast.Call):
+            function_name = node.func.id
+            value = self.evaluate_node(node.args[0])
+    
+            functions = {
+                "sin": sine,
+                "cos": cosine,
+                "tan": tangent,
+                "asin": arcsine,
+                "acos": arccosine,
+                "atan": arctangent,
+                "log": log,
+                "ln": ln,
+            }
+    
+            if function_name in functions:
+                    return functions[function_name](value)
+        
+            raise ValueError("Invalid expression")
+        
     def create_buttons(self):
         """Create all number, operation, and scientific buttons."""
         button_frame = tk.Frame(self.root, bg="#000000")
@@ -189,8 +267,8 @@ class CalculatorGUI:
             ["sin", "cos", "tan", "√", "×"],
             ["asin", "acos", "atan", "x²", "-"],
             ["log", "ln", "n!", "xʸ", "+"],
-            ["7", "8", "9", "Ans", "="],
-            ["4", "5", "6", ".", "Hist"],
+            ["7", "8", "9","π", "Ans", "="],
+            ["4", "5", "6", ".",")", "Hist"],
             ["1", "2", "3", "0", "Exit"],
         ]
 
@@ -241,7 +319,7 @@ class CalculatorGUI:
             selectbackground="#ff9f0a",
             selectforeground="white",
         )
-        
+    
         # Double-clicking a previous calculation puts its answer on the display.
         self.history_box.pack(side="left", fill="both", expand=True)
         self.history_box.bind("<Double-Button-1>", self.use_history_answer)
@@ -276,6 +354,7 @@ class CalculatorGUI:
             "atan",
             "log",
             "ln",
+            "π",
             "Ans",
             "Hist",
             "Exit",
@@ -344,7 +423,11 @@ class CalculatorGUI:
         elif value == "n!":
             self.calculate_single_input("!", factorial)
         elif value in ["sin", "cos", "tan", "asin", "acos", "atan", "log", "ln"]:
-            self.calculate_scientific(value)
+            self.add_function_to_display(value)
+        elif value == "π":
+            self.add_to_display("π")
+        elif value == ")":
+            self.add_to_display(")")
         else:
             self.add_to_display(value)
 
@@ -424,27 +507,10 @@ class CalculatorGUI:
         expression = self.display_text.get()
 
         try:
-            left_value, operator, right_value = self.split_expression(expression)
-            number_one, number_two = validate_two_numbers(left_value, right_value)
-
-
-            # Choose the correct backend function based on the operator.
-            if operator == "+":
-                result = add(number_one, number_two)
-            elif operator == "-":
-                result = subtract(number_one, number_two)
-            elif operator == "×":
-                result = multiply(number_one, number_two)
-            elif operator == "÷":
-                result = divide(number_one, number_two)
-            elif operator == "xʸ":
-                result = power(number_one, number_two)
-            else:
-                raise ValueError("Unknown operator")
-
+            result = self.evaluate_expression(expression)
             self.show_result(expression, result)
 
-        except (ValueError, OverflowError):
+        except (ValueError, SyntaxError, ZeroDivisionError, OverflowError):
             self.display_text.set("Error")
 
     def split_expression(self, expression):
