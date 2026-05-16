@@ -147,7 +147,6 @@ class CalculatorGUI:
         self.angle_mode = "DEG"
         self.mode_text = tk.StringVar(value="Mode: Degree")
 
-        # Build each section of the interface.
         self.create_display()
         self.create_buttons()
         self.create_history()
@@ -200,13 +199,16 @@ class CalculatorGUI:
     
 
     def set_angle_mode(self, mode):
+        """Change between degree mode and radian mode."""
         self.angle_mode = mode
-        
+    
         if mode == "DEG":
             self.mode_text.set("Mode: Degree")
         else:
             self.mode_text.set("Mode: Radian")
+    
     def evaluate_expression(self, expression):
+
         """Safely evaluate a calculator expression without using Python eval."""
         expression = expression.replace("×", "*")
         expression = expression.replace("÷", "/")
@@ -259,33 +261,34 @@ class CalculatorGUI:
                 return functions[function_name](value)
         
             raise ValueError("Invalid expression")
+            
+        def get_scientific_functions(self):
+            """Return scientific functions depending on degree or radian mode."""
+            if self.angle_mode == "RAD":
+                return {
+                    "sin": math.sin,
+                    "cos": math.cos,
+                    "tan": math.tan,
+                    "asin": math.asin,
+                    "acos": math.acos,
+                    "atan": math.atan,
+                    "log": log,
+                    "ln": ln,
+                    "sqrt": square_root,
+                }
         
-    def get_scientific_functions(self):
-        """Return scientific functions depending on degree or radian mode."""
-        if self.angle_mode == "RAD":
             return {
-                "sin": math.sin,
-                "cos": math.cos,
-                "tan": math.tan,
-                "asin": math.asin,
-                "acos": math.acos,
-                "atan": math.atan,
+                "sin": sine,
+                "cos": cosine,
+                "tan": tangent,
+                "asin": arcsine,
+                "acos": arccosine,
+                "atan": arctangent,
                 "log": log,
                 "ln": ln,
                 "sqrt": square_root,
             }
-    
-        return {
-            "sin": sine,
-            "cos": cosine,
-            "tan": tangent,
-            "asin": arcsine,
-            "acos": arccosine,
-            "atan": arctangent,
-            "log": log,
-            "ln": ln,
-            "sqrt": square_root,
-        }
+
     def create_buttons(self):
         """Create all number, operation, and scientific buttons."""
         button_frame = tk.Frame(self.root, bg="#000000")
