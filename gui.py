@@ -144,7 +144,9 @@ class CalculatorGUI:
         self.display_text = tk.StringVar(value="0")
         self.previous_answer = ""
         self.history = []
-        
+        self.angle_mode = "DEG"
+        self.mode_text = tk.StringVar(value="Mode: Degree")
+
         # Build each section of the interface.
         self.create_display()
         self.create_buttons()
@@ -165,6 +167,15 @@ class CalculatorGUI:
             anchor="w",
         )
         title_label.pack(fill="x", pady=(0, 14))
+        self.mode_label = tk.Label(
+            display_frame,
+            textvariable=self.mode_text,
+            font=("Arial", 11),
+            bg="#000000",
+            fg="#ff9f0a",
+            anchor="w",
+        )
+        self.mode_label.pack(fill="x", pady=(0, 8))
 
         self.display = tk.Label(
             display_frame,
@@ -187,21 +198,22 @@ class CalculatorGUI:
         else:
             self.display_text.set(current + function_name + "(")
     
-    def evaluate_expression(self, expression):
-        expression = expression.replace("×", "*")
-        expression = expression.replace("÷", "/")
-        expression = expression.replace("xʸ", "**")
-        expression = expression.replace("π", str(math.pi))
+
+    def set_angle_mode(self, mode):
+        self.angle_mode = mode
         
-        tree = ast.parse(expression, mode="eval")
-        return self.evaluate_expression(tree.body)
-        
+        if mode == "DEG":
+            self.mode_text.set("Mode: Degree")
+        else:
+            self.mode_text.set("Mode: Radian")
     def evaluate_expression(self, expression):
         """Safely evaluate a calculator expression without using Python eval."""
         expression = expression.replace("×", "*")
         expression = expression.replace("÷", "/")
         expression = expression.replace("xʸ", "**")
         expression = expression.replace("π", str(math.pi))
+        expression = expression.replace("√", "sqrt")
+
     
         tree = ast.parse(expression, mode="eval")
         return self.evaluate_node(tree.body)
@@ -234,27 +246,46 @@ class CalculatorGUI:
                 return value
             if isinstance(node.op, ast.USub):
                 return -value
-    
         if isinstance(node, ast.Call):
+            if not isinstance(node.func, ast.Name):
+                raise ValueError("Invalid function")
+        
             function_name = node.func.id
             value = self.evaluate_node(node.args[0])
-    
-            functions = {
-                "sin": sine,
-                "cos": cosine,
-                "tan": tangent,
-                "asin": arcsine,
-                "acos": arccosine,
-                "atan": arctangent,
-                "log": log,
-                "ln": ln,
-            }
-    
+        
+            functions = self.get_scientific_functions()
+        
             if function_name in functions:
-                    return functions[function_name](value)
+                return functions[function_name](value)
         
             raise ValueError("Invalid expression")
         
+    def get_scientific_functions(self):
+        """Return scientific functions depending on degree or radian mode."""
+        if self.angle_mode == "RAD":
+            return {
+                "sin": math.sin,
+                "cos": math.cos,
+                "tan": math.tan,
+                "asin": math.asin,
+                "acos": math.acos,
+                "atan": math.atan,
+                "log": log,
+                "ln": ln,
+                "sqrt": square_root,
+            }
+    
+        return {
+            "sin": sine,
+            "cos": cosine,
+            "tan": tangent,
+            "asin": arcsine,
+            "acos": arccosine,
+            "atan": arctangent,
+            "log": log,
+            "ln": ln,
+            "sqrt": square_root,
+        }
     def create_buttons(self):
         """Create all number, operation, and scientific buttons."""
         button_frame = tk.Frame(self.root, bg="#000000")
@@ -263,13 +294,14 @@ class CalculatorGUI:
 
         # Buttons are stored in a list of rows to make the layout easier to read.
         buttons = [
-            ["C", "⌫", "+/-", "%", "÷"],
-            ["sin", "cos", "tan", "√", "×"],
-            ["asin", "acos", "atan", "x²", "-"],
-            ["log", "ln", "n!", "xʸ", "+"],
-            ["7", "8", "9","π", "Ans", "="],
-            ["4", "5", "6", ".",")", "Hist"],
-            ["1", "2", "3", "0", "Exit"],
+            ["C", "⌫", "DEG", "RAD", "÷"],
+            ["sin", "cos", "tan", "π", "×"],
+            ["asin", "acos", "atan", "(", "-"],
+            ["log", "ln", "√", ")", "+"],
+            ["7", "8", "9", "x²", "="],
+            ["4", "5", "6", "xʸ", "Ans"],
+            ["1", "2", "3", ".", "Hist"],
+            ["0", "+/-", "%", "n!", "Exit"],
         ]
 
         for row_number, row in enumerate(buttons):
@@ -291,7 +323,7 @@ class CalculatorGUI:
                     pady=5,
                     sticky="nsew",
                 )
-
+    
     def create_history(self):
         """Create the calculation history area."""
         history_frame = tk.Frame(self.root, bg="#000000")
@@ -355,6 +387,10 @@ class CalculatorGUI:
             "log",
             "ln",
             "π",
+            "DEG",
+            "RAD",
+            "(",
+            ")",
             "Ans",
             "Hist",
             "Exit",
@@ -373,7 +409,7 @@ class CalculatorGUI:
         if self.get_button_color(button_text) == "#a5a5a5":
             return "#000000"
         return "white"
-
+    
     def bind_keyboard(self):
         """Allow the calculator to be controlled by the keyboard."""
         self.root.bind("<Key>", self.keyboard_input)
@@ -392,6 +428,8 @@ class CalculatorGUI:
         elif key in "+-*/^":
             # Keyboard symbols are converted later to the display symbols.
             self.add_operator(key)
+        elif key in "()":
+            self.add_to_display(key)
         elif key == "=":
             self.calculate_result()
 
@@ -417,17 +455,21 @@ class CalculatorGUI:
         elif value == "%":
             self.calculate_percentage()
         elif value == "√":
-            self.calculate_single_input("√", square_root)
+            self.add_function_to_display("√")
         elif value == "x²":
             self.calculate_single_input("x²", square)
         elif value == "n!":
             self.calculate_single_input("!", factorial)
         elif value in ["sin", "cos", "tan", "asin", "acos", "atan", "log", "ln"]:
             self.add_function_to_display(value)
+        elif value == "DEG":
+            self.set_angle_mode("DEG")
+        elif value == "RAD":
+            self.set_angle_mode("RAD")
         elif value == "π":
             self.add_to_display("π")
-        elif value == ")":
-            self.add_to_display(")")
+        elif value in ["(",")"]:
+            self.add_to_display(value)
         else:
             self.add_to_display(value)
 
@@ -615,10 +657,41 @@ class CalculatorGUI:
             self.display_text.set(answer)
 
     def format_number(self, value):
-        """Format results so whole numbers do not show unnecessary .0."""
+        """Format results and show common radian answers using π."""
+        if self.angle_mode == "RAD":
+            pi_text = self.format_pi_result(value)
+            if pi_text is not None:
+                return pi_text
+    
         if isinstance(value, float) and value.is_integer():
             return str(int(value))
+    
         return str(round(value, 10))
+    def format_pi_result(self, value):
+        """Convert common radian answers into π format."""
+        pi = math.pi
+    
+        common_values = {
+            0: "0",
+            pi / 6: "π/6",
+            pi / 4: "π/4",
+            pi / 3: "π/3",
+            pi / 2: "π/2",
+            pi: "π",
+            2 * pi: "2π",
+            -pi / 6: "-π/6",
+            -pi / 4: "-π/4",
+            -pi / 3: "-π/3",
+            -pi / 2: "-π/2",
+            -pi: "-π",
+            -2 * pi: "-2π",
+        }
+    
+        for number, text in common_values.items():
+            if abs(value - number) < 0.000001:
+                return text
+    
+        return None
 
     def run(self):
         """Start the Tkinter event loop."""
