@@ -262,32 +262,32 @@ class CalculatorGUI:
         
             raise ValueError("Invalid expression")
             
-        def get_scientific_functions(self):
-            """Return scientific functions depending on degree or radian mode."""
-            if self.angle_mode == "RAD":
-                return {
-                    "sin": math.sin,
-                    "cos": math.cos,
-                    "tan": math.tan,
-                    "asin": math.asin,
-                    "acos": math.acos,
-                    "atan": math.atan,
-                    "log": log,
-                    "ln": ln,
-                    "sqrt": square_root,
-                }
-        
+    def get_scientific_functions(self):
+        """Return scientific functions depending on degree or radian mode."""
+        if self.angle_mode == "RAD":
             return {
-                "sin": sine,
-                "cos": cosine,
-                "tan": tangent,
-                "asin": arcsine,
-                "acos": arccosine,
-                "atan": arctangent,
+                "sin": math.sin,
+                "cos": math.cos,
+                "tan": math.tan,
+                "asin": math.asin,
+                "acos": math.acos,
+                "atan": math.atan,
                 "log": log,
                 "ln": ln,
                 "sqrt": square_root,
             }
+        
+        return {
+            "sin": sine,
+            "cos": cosine,
+            "tan": tangent,
+            "asin": arcsine,
+            "acos": arccosine,
+            "atan": arctangent,
+            "log": log,
+            "ln": ln,
+            "sqrt": square_root,
+        }
 
     def create_buttons(self):
         """Create all number, operation, and scientific buttons."""
